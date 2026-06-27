@@ -1,0 +1,13 @@
+/* No Tailwind v4, usamos apenas o import principal */
+@import "tailwindcss";
+
+/* Reset adicional para garantir que o dashboard ocupe a tela toda */
+@layer base {
+  html, body, #root {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 100vh;
+  }
+}

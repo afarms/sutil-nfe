@@ -1,0 +1,17 @@
+/* Removi as configurações padrão do Vite que estavam
+   causando o erro de centralização e largura limitada.
+*/
+
+:root {
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Se você quiser adicionar uma fonte personalizada,
+   pode fazer aqui, mas não coloque 'text-align: center' ou 'max-width' no #root.
+*/
+
