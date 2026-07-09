@@ -81,6 +81,8 @@ Com os valores padrao do `.env.example`:
 
 - Aplicacao: `http://localhost:8080`
 - Status: `http://localhost:8080/api/status`
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 
 ### Conexao local com PostgreSQL
 
