@@ -63,6 +63,14 @@ O Compose sobe dois servicos:
 - `sutil-nfe-db-local`: PostgreSQL Alpine com volume persistente.
 - `sutil-nfe-app-local`: aplicacao Java, aguardando o healthcheck do banco.
 
+Para conferir se os containers estao saudaveis:
+
+```bash
+docker ps
+```
+
+O banco deve aparecer como `healthy`. A aplicacao tambem deve aparecer como `healthy` depois que o endpoint `/api/status` responder.
+
 ### Verificar logs
 
 ```bash

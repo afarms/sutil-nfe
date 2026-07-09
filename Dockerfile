@@ -12,7 +12,8 @@ FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-RUN addgroup -S app && adduser -S app -G app \
+RUN apk add --no-cache curl \
+    && addgroup -S app && adduser -S app -G app \
     && mkdir -p /app/NFEs \
     && chown -R app:app /app
 

@@ -39,6 +39,12 @@ services:
       - "${APP_PORT}:${SERVER_PORT}"
     volumes:
       - sutil-nfe-files:${NFE_BASE_PATH}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS \"http://localhost:$${SERVER_PORT}/api/status\" > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
     networks:
       - sutil-nfe-local
 
