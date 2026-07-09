@@ -1,19 +1,18 @@
 package br.com.sutilnfe.backend.application;
 
 import br.com.sutilnfe.backend.domain.NotaFiscal;
-import br.com.sutilnfe.backend.infra.filesystem.NotaFiscalJsonRepository;
+import br.com.sutilnfe.backend.domain.NotaFiscalRepository;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
 @Service
 public class NotaFiscalService {
 
-    private final NotaFiscalJsonRepository repository;
+    private final NotaFiscalRepository repository;
 
-    public NotaFiscalService(NotaFiscalJsonRepository repository) {
+    public NotaFiscalService(NotaFiscalRepository repository) {
         this.repository = repository;
     }
 
@@ -22,10 +21,10 @@ public class NotaFiscalService {
     }
 
     public Map<String, Long> anosDir(){
-        return repository.getJsonsDir();
+        return repository.getAnosComQuantidade();
     }
 
-    public void salvar(NotaFiscal nota) throws IOException {
+    public void salvar(NotaFiscal nota) {
         repository.salvar(nota);
     }
 

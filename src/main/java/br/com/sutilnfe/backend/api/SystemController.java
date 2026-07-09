@@ -23,7 +23,7 @@ public class SystemController {
                 "pastas", Map.of(
                         "naoprocessada", paths.naoProcessadas().toString(),
                         "processada", paths.processadas().toString(),
-                        "arquivos_json", paths.jsons().toString()
+                        "erros", paths.erros().toString()
                 )
         );
     }

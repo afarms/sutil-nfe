@@ -1,7 +1,6 @@
 package br.com.sutilnfe.backend.infra.filesystem;
 
 import br.com.sutilnfe.backend.domain.NotaFiscal;
-import org.springframework.stereotype.Repository;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -15,7 +14,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@Repository
 public class NotaFiscalJsonRepository {
 
     private final NfePathConfig paths;
