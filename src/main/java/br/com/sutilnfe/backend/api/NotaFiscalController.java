@@ -56,8 +56,6 @@ public class NotaFiscalController {
             return ResponseEntity.notFound().build();
         }
 
-        service.deletar(oldNota);
-
         oldNota.setIncremento(nota.incremento());
         oldNota.setSplitPj(nota.splitPj());
         oldNota.setNumero(nota.numero());
