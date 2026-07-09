@@ -1,8 +1,8 @@
 package br.com.sutilnfe.backend.application;
 
 import br.com.sutilnfe.backend.domain.NotaFiscal;
+import br.com.sutilnfe.backend.domain.NotaFiscalRepository;
 import br.com.sutilnfe.backend.infra.filesystem.NfePathConfig;
-import br.com.sutilnfe.backend.infra.filesystem.NotaFiscalJsonRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -24,15 +24,17 @@ public class ProcessarPdfService {
     private static final Logger log = LoggerFactory.getLogger(ProcessarPdfService.class);
 
     private final NfePathConfig paths;
-    private final NotaFiscalJsonRepository repository;
-
+    private final NotaFiscalRepository repository;
+    private final ArquivoNfeService arquivoNfeService;
 
     public ProcessarPdfService(
             NfePathConfig paths,
-            NotaFiscalJsonRepository repository
+            NotaFiscalRepository repository,
+            ArquivoNfeService arquivoNfeService
     ) {
         this.paths = paths;
         this.repository = repository;
+        this.arquivoNfeService = arquivoNfeService;
     }
 
     public int processar() {
@@ -40,7 +42,7 @@ public class ProcessarPdfService {
 
         Path diretorioEntrada = paths.naoProcessadas();
         Path diretorioProcessadas = paths.processadas();
-        Path diretorioErros = paths.processadas().resolveSibling("erros");
+        Path diretorioErros = paths.erros();
 
         try {
             Files.createDirectories(diretorioProcessadas);
@@ -54,67 +56,75 @@ public class ProcessarPdfService {
                 log.info("Encontrados {} arquivos PDF para processar", pdfs.size());
 
                 for (Path pdf : pdfs) {
-                    log.info("📄 Processando PDF: {}", pdf.getFileName());
+                    UUID arquivoId = null;
+                    log.info("Processando PDF: {}", pdf.getFileName());
 
                     try {
-                        // Extrair dados do PDF
+                        arquivoId = arquivoNfeService.registrarProcessando(pdf);
+
                         NotaFiscal nota = extrairDadosDoPDF(pdf);
+                        validarNotaExtraida(nota);
 
-                        // Validar dados mínimos
-                        if (nota.getChaveAcesso() == null || nota.getChaveAcesso().isEmpty()) {
-                            throw new IllegalArgumentException("Chave de acesso não encontrada no PDF");
-                        }
-
-                        // Verificar se já existe
-                        int year = nota.getDataEmissao().getYear();
-                        if (repository.existeNotaComChave(nota.getChaveAcesso(), year)) {
-                            log.warn("Nota com chave {} já existe no sistema", nota.getChaveAcesso());
+                        if (repository.existeNotaComChave(nota.getChaveAcesso())) {
+                            log.warn("Nota com chave {} ja existe no sistema", nota.getChaveAcesso());
+                            arquivoNfeService.marcarProcessado(arquivoId, null);
                             moverParaProcessados(pdf, diretorioProcessadas);
                             continue;
                         }
 
-                        // Configurar dados adicionais
                         nota.setId(UUID.randomUUID().toString());
                         nota.setArquivoOrigem(pdf.getFileName().toString());
 
-                        // Salvar como JSON
                         repository.salvar(nota);
+                        arquivoNfeService.marcarProcessado(arquivoId, nota.getId());
 
-                        log.info("✅ Nota processada com sucesso:");
-                        log.info("   Número: {}", nota.getNumero());
-                        log.info("   Chave: {}", nota.getChaveAcesso());
-                        log.info("   Emitente: {}", nota.getEmitenteNome());
-                        log.info("   Tomador: {}", nota.getTomadorNome());
-                        log.info("   Valor: R$ {}", nota.getValorServico());
-
-                        // Mover arquivo PDF processado
+                        log.info("Nota processada com sucesso: numero={}, chave={}", nota.getNumero(), nota.getChaveAcesso());
                         moverParaProcessados(pdf, diretorioProcessadas);
-
                         processados++;
-
                     } catch (Exception e) {
-                        log.error("❌ Erro ao processar arquivo {}: {}", pdf.getFileName(), e.getMessage());
-                        e.printStackTrace();
-
-                        // Mover para diretório de erros
-                        try {
-                            Path destinoErro = diretorioErros.resolve(pdf.getFileName());
-                            Files.move(pdf, destinoErro, StandardCopyOption.REPLACE_EXISTING);
-                            log.info("📂 PDF movido para diretório de erros: {}", destinoErro);
-                        } catch (IOException ioException) {
-                            log.error("❌ Falha ao mover PDF para diretório de erros", ioException);
-                        }
+                        log.error("Erro ao processar arquivo {}: {}", pdf.getFileName(), e.getMessage(), e);
+                        arquivoNfeService.registrarErro(arquivoId, pdf, e.getMessage());
+                        moverParaErros(pdf, diretorioErros);
                     }
                 }
             }
         } catch (Exception e) {
-            log.error("❌ Erro geral ao processar PDFs", e);
+            log.error("Erro geral ao processar PDFs", e);
             throw new RuntimeException("Erro ao processar PDFs", e);
         }
 
-        log.info("✅ Processamento concluído. Total de PDFs processados com sucesso: {}", processados);
+        log.info("Processamento concluido. Total de PDFs processados com sucesso: {}", processados);
         return processados;
     }
 
-}
+    private void validarNotaExtraida(NotaFiscal nota) {
+        if (nota.getChaveAcesso() == null || nota.getChaveAcesso().isBlank()) {
+            throw new IllegalArgumentException("Chave de acesso nao encontrada no PDF");
+        }
+        if (nota.getDataEmissao() == null) {
+            throw new IllegalArgumentException("Data de emissao nao encontrada no PDF");
+        }
+        if (nota.getEmitenteNome() == null || nota.getEmitenteNome().isBlank()) {
+            throw new IllegalArgumentException("Nome do emitente nao encontrado no PDF");
+        }
+        if (nota.getEmitenteCnpjCpf() == null || nota.getEmitenteCnpjCpf().isBlank()) {
+            throw new IllegalArgumentException("Documento do emitente nao encontrado no PDF");
+        }
+        if (nota.getTomadorNome() == null || nota.getTomadorNome().isBlank()) {
+            throw new IllegalArgumentException("Nome do tomador nao encontrado no PDF");
+        }
+        if (nota.getTomadorCnpjCpf() == null || nota.getTomadorCnpjCpf().isBlank()) {
+            throw new IllegalArgumentException("Documento do tomador nao encontrado no PDF");
+        }
+    }
 
+    private void moverParaErros(Path pdf, Path diretorioErros) {
+        try {
+            Path destinoErro = diretorioErros.resolve(pdf.getFileName());
+            Files.move(pdf, destinoErro, StandardCopyOption.REPLACE_EXISTING);
+            log.info("PDF movido para diretorio de erros: {}", destinoErro);
+        } catch (IOException ioException) {
+            log.error("Falha ao mover PDF para diretorio de erros", ioException);
+        }
+    }
+}

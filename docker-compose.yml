@@ -1,0 +1,57 @@
+services:
+  sutil-nfe-db-local:
+    image: postgres:17-alpine
+    container_name: sutil-nfe-db-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - sutil-nfe-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - sutil-nfe-local
+
+  sutil-nfe-app-local:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sutil-nfe-app-local
+    restart: unless-stopped
+    depends_on:
+      sutil-nfe-db-local:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: ${SERVER_PORT}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      NFE_BASE_PATH: ${NFE_BASE_PATH}
+    ports:
+      - "${APP_PORT}:${SERVER_PORT}"
+    volumes:
+      - sutil-nfe-files:${NFE_BASE_PATH}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS \"http://localhost:$${SERVER_PORT}/api/status\" > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+    networks:
+      - sutil-nfe-local
+
+volumes:
+  sutil-nfe-postgres-data:
+  sutil-nfe-files:
+
+networks:
+  sutil-nfe-local:
+    driver: bridge
